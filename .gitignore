@@ -1,0 +1,15 @@
+# Python environment and temporary files
+venv/
+__pycache__/
+*.pyc
+
+# App build files
+build/
+dist/
+*.spec
+
+# Downloaded automatically when the program runs
+models/hand_landmarker.task
+
+# Hand photos (large, and they show other people's hands)
+data/images/
