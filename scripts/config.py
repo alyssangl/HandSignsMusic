@@ -55,6 +55,10 @@ VOLUME_SIZE_NEAR = 0.25   # hand size when your hand is near -> loudest
 VOLUME_MIN = 0.2          # quietest volume (0 = silent, 1 = full)
 VOLUME_SMOOTHING = 0.3    # 0.1 = very smooth/slow changes, 1.0 = instant (can be jumpy)
 
+# ---------- Song mode (sight reading) ----------
+SONG_CHECK_OCTAVE = True  # True = the note must be in the right octave zone. False = easier
+SONG_CHECK_CHORD = True   # True = the left hand must also hold the right chord (if chords are on)
+
 # ---------- Chords (left hand) ----------
 CHORDS_ENABLED = True     # press C in the app to turn chords on/off
 CHORD_BASE_MIDI = 48      # reference C for building chords (don't change)
@@ -75,7 +79,7 @@ CHORD_AREA = (0.03, 0.12, 0.45, 0.85)
 # ---------- Sound ----------
 # Instrument sound: "piano", "melody" (soft organ/flute) or "pad" (very soft, sustained)
 MELODY_TIMBRE = "piano"
-CHORD_TIMBRE = "pad"    # try "pad" for a soft sustained background instead
+CHORD_TIMBRE = "piano"    # try "pad" for a soft sustained background instead
 
 SAMPLE_RATE = 44100
 MASTER_VOLUME = 0.4       # Overall volume. For louder sound, turn up your laptop volume first.
@@ -83,7 +87,12 @@ ATTACK_TIME = 0.02        # Seconds for a note to fade in (avoids clicks)
 RELEASE_TIME = 0.15       # Seconds for a note to fade out
 
 # ---------- Paths ----------
+import sys
 from pathlib import Path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent   # the HandSignsMusic folder
+if getattr(sys, "frozen", False):
+    # Running as a packaged app (.exe): folders sit next to the .exe
+    PROJECT_ROOT = Path(sys.executable).resolve().parent
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent   # the HandSignsMusic folder
 DATA_DIR = PROJECT_ROOT / "data"
 MODEL_DIR = PROJECT_ROOT / "models"

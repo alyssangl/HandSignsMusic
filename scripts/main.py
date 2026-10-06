@@ -10,6 +10,8 @@ Run from the HandSignsMusic folder:
 Controls:
     [  /  ]   transpose down / up (change key)
     C         chords on / off
+    S         song mode on / off (sight reading)
+    N / R     next song / restart song (in song mode)
     Q         quit
 """
 
@@ -23,6 +25,7 @@ from sign_recognizer import SignRecognizer
 from sound_player import SoundPlayer
 from melody_controller import MelodyController, ZONE_TOP, ZONE_BOTTOM
 from chord_controller import ChordController
+from song_mode import SongMode
 from music_utils import NOTE_NAMES
 
 ORANGE = (0, 200, 255)
@@ -106,7 +109,7 @@ def draw_info(frame, melody, chords, recognizer, fps):
         size_txt = "-" if melody.hand_size is None else f"{melody.hand_size:.2f}"
         cv2.putText(frame, f"hand size {size_txt}", (w - 330, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.55, GRAY, 1)
 
-    cv2.putText(frame, "[ ] change key | C chords on/off | Q quit", (20, h - 100),
+    cv2.putText(frame, "[ ] key | C chords | S song mode | N next | R restart | Q quit", (20, h - 100),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, WHITE, 1)
 
 
@@ -124,6 +127,7 @@ def main():
     player.start()
     melody = MelodyController(player)
     chords = ChordController(player)
+    song = SongMode()
     print(f"Loaded model: {recognizer.model_name}")
 
     prev = time.time()
@@ -143,6 +147,7 @@ def main():
             sign = recognizer.update(right)
             melody.update(sign, right["height"] if right else None, right["size"] if right else None)
             chords.update(left)
+            song.update(melody, chords)
 
             # Drawing
             draw_chord_grid(frame, chords)
@@ -152,6 +157,7 @@ def main():
             fps = 0.9 * fps + 0.1 * (1 / max(now - prev, 1e-6))
             prev = now
             draw_info(frame, melody, chords, recognizer, fps)
+            song.draw(frame)
             cv2.imshow("Hand Sign Music", frame)
 
             key = cv2.waitKey(1) & 0xFF
@@ -163,6 +169,12 @@ def main():
                 chords.set_transpose(t)
             elif key == ord("c"):
                 chords.toggle()
+            elif key == ord("s"):
+                song.toggle(chords)
+            elif key == ord("n") and song.active:
+                song.next_song()
+            elif key == ord("r") and song.active:
+                song.restart()
     finally:
         melody.stop()
         chords.stop()

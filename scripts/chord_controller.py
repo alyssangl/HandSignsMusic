@@ -56,6 +56,7 @@ class ChordController:
         self.transpose = config.TRANSPOSE
         self.enabled = config.CHORDS_ENABLED
         self.cell = None            # (row, col) of the active box, or None
+        self.area = config.CHORD_AREA   # grid position on screen (song mode moves it down a bit)
         self._notes = None
         self._ids = []
 
@@ -64,16 +65,15 @@ class ChordController:
     def grid_size():
         return len(config.CHORD_GRID), len(config.CHORD_GRID[0])
 
-    @staticmethod
-    def cell_rect(row, col):
+    def cell_rect(self, row, col):
         """Box position as fractions: (left, top, right, bottom)."""
-        x1, y1, x2, y2 = config.CHORD_AREA
-        rows, cols = ChordController.grid_size()
+        x1, y1, x2, y2 = self.area
+        rows, cols = self.grid_size()
         cw, ch = (x2 - x1) / cols, (y2 - y1) / rows
         return x1 + col * cw, y1 + row * ch, x1 + (col + 1) * cw, y1 + (row + 1) * ch
 
     def _cell_at(self, x, y):
-        x1, y1, x2, y2 = config.CHORD_AREA
+        x1, y1, x2, y2 = self.area
         if not (x1 <= x < x2 and y1 <= y < y2):
             return None
         rows, cols = self.grid_size()
@@ -129,6 +129,13 @@ class ChordController:
     def label(self, row, col):
         roman = config.CHORD_GRID[row][col]
         return roman, chord_name(chord_notes(roman, self.transpose))
+
+    @property
+    def current_roman(self):
+        """Roman numeral of the chord being played, or None."""
+        if not self.enabled or self.cell is None:
+            return None
+        return config.CHORD_GRID[self.cell[0]][self.cell[1]]
 
     @property
     def chord_text(self):

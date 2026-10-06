@@ -42,6 +42,10 @@ class MelodyController:
         self.volume = 1.0           # current melody volume 0..1
         self.hand_size = None       # last measured hand size (shown on screen for calibration)
 
+        # every time a note STARTS (new note or flick), this counter goes up (used by song mode)
+        self.note_events = 0
+        self.last_event = None      # (sign, octave) of the last note that started
+
     def _octave_from_height(self, height):
         candidate = 1 if height < ZONE_TOP else (0 if height < ZONE_BOTTOM else -1)
         if candidate != self.octave:
@@ -111,12 +115,16 @@ class MelodyController:
             self.player.note_off(self._note_id)
             self._note_id = self.player.note_on(midi, volume=self.volume, timbre=config.MELODY_TIMBRE)
             self.last_tap = now
+            self.note_events += 1
+            self.last_event = (sign, self.octave)
         elif midi != self._midi:
             if self._note_id is not None:
                 self.player.note_off(self._note_id)
                 self._note_id = None
             if midi is not None:
                 self._note_id = self.player.note_on(midi, volume=self.volume, timbre=config.MELODY_TIMBRE)
+                self.note_events += 1
+                self.last_event = (sign, self.octave)
             self._midi = midi
         elif self._note_id is not None:
             self.player.set_volume(self._note_id, self.volume)   # held note follows the hand
