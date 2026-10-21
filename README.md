@@ -2,7 +2,7 @@
 
 Play music with your hands in front of a webcam. Your **right hand** plays the melody using number hand signs (1–7, like numbered notation 簡譜), and your **left hand** plays chords. No physical instrument needed.
 
-The core of the project is a **custom-trained hand sign recognition model**: MediaPipe finds the hand and its 21 key points, and a neural network trained on our own recorded dataset recognizes which number sign is being shown.
+The core of the project is a **custom-trained hand sign recognition model**: MediaPipe finds the hand and its 21 key points, and a classifier (SVM) trained on our own recorded dataset recognizes which number sign is being shown.
 
 Final project for the course *Introduction to Image Recognition AI and Robotics Lab*, created by **Alyssa**.
 
@@ -23,7 +23,7 @@ Final project for the course *Introduction to Image Recognition AI and Robotics 
 
 ```
 Webcam → MediaPipe hand tracking (21 landmarks per hand)
-       ├── Right hand → normalize landmarks → neural network → sign (1–7 / rest)
+       ├── Right hand → normalize landmarks → SVM classifier → sign (1–7 / rest)
        │                 + hand height → octave, hand size → volume
        │                 → melody note
        └── Left hand  → position in chord grid → chord
@@ -33,7 +33,7 @@ Webcam → MediaPipe hand tracking (21 landmarks per hand)
 
 1. **Hand tracking:** MediaPipe Hand Landmarker detects both hands and returns 21 points per hand.
 2. **Normalization:** the points are moved so the wrist is at the origin and scaled by hand size, so the model learns the hand *shape*, not its position or distance from the camera.
-3. **Classification:** a neural network (MLP) trained on our own dataset predicts the sign. Predictions are smoothed over several frames to avoid flickering.
+3. **Classification:** a classifier trained on our own dataset predicts one of 8 classes (rest + signs 1–7). Three models were compared and SVM was chosen. Predictions are smoothed over several frames to avoid flickering.
 4. **Music logic:** the sign, hand height, and hand size become a note, octave, and volume. The left hand's position selects a chord.
 5. **Sound:** notes are synthesized in real time with a simple piano model and mixed together.
 
@@ -110,10 +110,23 @@ Tip: slowly move and tilt your hand while a burst records, so the model sees man
 
 ```bash
 python scripts/train_model.py
-python scripts/train_model.py --test-person amy   # test on a person not used for training
 ```
 
-Compares Random Forest, Neural Network (MLP), and SVM, prints a per-sign report, saves a confusion matrix to `models/confusion_matrix.png`, and saves the final model to `models/sign_model.joblib`.
+What the script does:
+
+1. Loads all samples from `data/landmarks.csv` and shows how many samples each sign has.
+2. Holds out **one whole recording burst per sign** as test data. Whole bursts are kept together because the 60 samples in one burst are nearly identical; splitting them between training and testing would make the accuracy look better than it really is.
+3. Trains three models on the remaining data: **Random Forest**, **Neural Network (MLP)**, and **SVM**, and prints the test accuracy of each.
+4. Prints a per-sign report (precision, recall, F1) for the best model and saves its confusion matrix to `models/confusion_matrix.png`.
+5. Retrains the best model on **all** data and saves it to `models/sign_model.joblib`, which the instrument uses.
+
+To test on a person the model has never seen, leave that person out of training:
+
+```bash
+python scripts/train_model.py --test-person armin
+```
+
+The person's name must match the `--person` name used when recording.
 
 To inspect or clean up recorded data:
 
@@ -221,12 +234,23 @@ HandSignsMusic/
 
 ## Results
 
-| Test | Accuracy |
-|------|----------|
-| Trained and tested on the same person (held-out bursts) | ~100% |
-| Trained on one person, tested on a new person | 80.6% (SVM) |
+Dataset: **6,300 samples** from **3 people**, 8 classes (rest + signs 1–7).
+Test set: one held-out recording burst per sign (480 samples). All three people are included in training, so this measures accuracy for **known users**.
 
-Testing on a new person showed that most errors come from **thumb position** (rest vs. 6, and 1 vs. 7), since different people hold their thumbs differently. Training on data from multiple people and recording natural variations of each sign (for example, sign 5 with fingers spread *and* together) improved recognition.
+| Model | Accuracy |
+|-------|----------|
+| Random Forest | 96.0% |
+| Neural Network (MLP) | 93.3% |
+| **SVM** (used in the instrument) | **96.2%** |
+
+Per-sign results (SVM):
+
+- rest, 1, 2, 3, 4 and 5 are recognized perfectly (60/60).
+- **7** is read as 6 in 13 of 60 samples (recall 78%), and **6** is read as rest in 5 of 60 samples.
+
+The remaining errors all involve the **thumb**: sign 6 is the thumb only and sign 7 is the thumb + index finger, and people hold their thumb differently. Recording natural variations of each sign from several people (for example, sign 5 with fingers spread *and* together) improved recognition.
+
+**Next:** leave-one-person-out evaluation (each person in turn left out of training and used as the test user) to measure accuracy on new users.
 
 ## Author
 
