@@ -17,6 +17,7 @@ Final project for the course *Introduction to Image Recognition AI and Robotics 
 - **Flick to repeat a note:** a quick downward flick of the hand replays the same note
 - **Volume by distance:** hand closer to the camera = louder
 - **Piano sound generated in code:** no sound files needed
+- **Song mode (sight reading):** read numbered notation and chords on screen and play along, like a Guitar Hero practice mode. The song only moves on when you play the right note and chord
 
 ## How it works
 
@@ -131,9 +132,46 @@ python scripts/main.py
 |-----|--------|
 | `[` / `]` | transpose down / up |
 | `C` | chords on / off |
+| `S` | song mode on / off |
+| `N` | next song (in song mode) |
+| `R` | restart song (in song mode) |
 | `Q` | quit |
 
 Try *Twinkle Twinkle Little Star*: hold chord **I** with your left hand and play `1 · 1 · 5 · 5 · 6 · 6 · 5` with your right hand (flick to repeat a note).
+
+### 5. Song mode (sight reading)
+
+Press `S` while playing. A panel at the top of the screen shows the song in numbered notation:
+
+- The **orange** box is the note to play now. Chord names (blue) appear above the notes where the chord changes.
+- Play the right note (and hold the right chord with your left hand): the box flashes **green** and the song moves on.
+- A wrong note flashes **red** and shows why: *wrong note*, *wrong octave*, or *wrong chord*. The song waits until you get it right.
+- **"flick!"** appears when the same note repeats.
+- A **dot above** a number means the high octave, a **dot below** means the low octave (like 簡譜).
+- At the end you get your **time, number of mistakes, and accuracy**.
+
+Included songs (all traditional / public domain):
+
+| Level | Songs |
+|-------|-------|
+| Easy (middle octave only) | Little Bee (小蜜蜂), Mary Had a Little Lamb, Twinkle Twinkle Little Star, London Bridge, Ode to Joy, Jingle Bells |
+| Medium (uses low / high octave) | Two Tigers (兩隻老虎), Row Row Row Your Boat, Old MacDonald, Happy Birthday |
+
+#### Adding your own songs
+
+Open `scripts/songs.py` and add a song to the `SONGS` list:
+
+```python
+{
+    "title": "My Song",
+    "notes": "1/I 2 3 1 3/IV 1 3",
+},
+```
+
+- Separate notes with spaces: `1 2 3`
+- Change chord by adding `/CHORD` after a note: `1/I`, `5/V`, `6/vi` (the chord stays until a new one is written)
+- High octave: add `'` (for example `1'`). Low octave: add `,` (for example `5,`)
+- Titles must use English letters (OpenCV cannot draw Chinese characters)
 
 ## Configuration
 
@@ -147,6 +185,8 @@ Settings are in `scripts/config.py`, for example:
 | `TAP_SPEED` | how fast a flick must be to repeat a note |
 | `VOLUME_SIZE_FAR`, `VOLUME_SIZE_NEAR` | hand sizes for quietest / loudest volume (shown on screen) |
 | `CHORD_GRID` | which chord is in which box |
+| `SONG_CHECK_OCTAVE` | song mode: `False` = octave isn't checked (easier for beginners) |
+| `SONG_CHECK_CHORD` | song mode: `False` = chord isn't checked, focus on the melody |
 
 ---
 
@@ -167,6 +207,8 @@ HandSignsMusic/
 │   ├── sign_recognizer.py     # loads the model, predicts + smooths signs
 │   ├── melody_controller.py   # right hand → melody (octaves, flick, volume)
 │   ├── chord_controller.py    # left hand → chords
+│   ├── song_mode.py           # sight-reading song mode
+│   ├── songs.py               # song list (add your own songs here)
 │   ├── collect_data.py        # record training data
 │   ├── train_model.py         # train and evaluate models
 │   ├── manage_data.py         # list / delete recorded bursts
