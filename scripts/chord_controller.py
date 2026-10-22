@@ -5,11 +5,9 @@ The left side of the screen is divided into a grid of boxes (config.CHORD_GRID).
 The box the left hand is in chooses WHICH chord.
 
 Playing the chord (strike mode, default):
-    - make a FIST          -> the chord plays
-    - OPEN the hand (5)    -> the same chord plays again
-    - FIST again           -> plays again, and so on
-  Every change between fist and open hand plays the chord once more.
-  Moving to another box only selects the next chord; it plays on the next fist/open change.
+    - hold a FIST or an OPEN hand in a box  -> that chord plays
+    - move to another box (fist or open)    -> the new chord plays right away
+    - same chord again? change fist <-> open in the same box -> it plays again
   Taking the hand out of the grid (or out of the camera) stops the chord.
 
 Set CHORD_STRIKE_MODE = False in config.py for the old behaviour
@@ -154,6 +152,7 @@ class ChordController:
         self.shape = None                 # stable shape of the left hand: "fist", "open" or None
         self._shape_history = deque(maxlen=SHAPE_STABLE_FRAMES)
         self.strikes = 0                  # how many times a chord was played (for display)
+        self._played_cell = None          # box of the chord that was played last
 
     # ---------- grid geometry ----------
     @staticmethod
@@ -220,29 +219,33 @@ class ChordController:
                 self._play(notes)
             return
 
-        # ----- strike mode: play on every change between fist and open hand -----
+        # ----- strike mode -----
+        #   * moving to ANOTHER box plays that chord right away (fist or open, doesn't matter)
+        #   * in the SAME box, changing fist <-> open plays the chord again
         if self.cell is None:
             if self._notes is not None:
                 self._play(None)            # hand left the grid -> stop
             self._shape_history.clear()
             self.shape = None
+            self._played_cell = None
             return
 
         self._shape_history.append(hand_shape(hand["points"]))
         h = self._shape_history
-        if len(h) < h.maxlen or h[0] is None or any(x != h[0] for x in h):
-            return                          # shape not stable yet
-        new_shape = h[0]
-        if new_shape == self.shape:
-            return
+        stable = len(h) == h.maxlen and h[0] is not None and all(x == h[0] for x in h)
 
-        first_time = self.shape is None
-        self.shape = new_shape
-        # A fist always plays. Opening the hand plays too, except when the hand
-        # arrives already open (then it just waits for the first fist).
-        if new_shape == "fist" or not first_time:
-            self._play(self._current_notes())
-            self.strikes += 1
+        if stable and h[0] != self.shape:
+            # fist <-> open change (or the first clear shape after entering the grid)
+            self.shape = h[0]
+            self._strike()
+        elif self.shape is not None and self.cell != self._played_cell:
+            # hand moved to another box while holding a fist or open hand
+            self._strike()
+
+    def _strike(self):
+        self._play(self._current_notes())
+        self._played_cell = self.cell
+        self.strikes += 1
 
     def set_transpose(self, semitones):
         self.transpose = max(-12, min(12, semitones))
@@ -255,6 +258,7 @@ class ChordController:
             self.player.note_off(nid)
         self._ids, self._notes, self.cell = [], None, None
         self.shape = None
+        self._played_cell = None
         self._shape_history.clear()
 
     # ---------- for the display ----------

@@ -4,7 +4,7 @@ Train the number-sign classifier from data/landmarks.csv.
 
 Run from the HandSignsMusic folder:
     python scripts/train_model.py
-    python scripts/train_model.py --test-person amy    # test on someone the model never saw
+    python scripts/train_model.py --test-person armin    # test on someone the model never saw
 
 What it does:
   1. Loads your recorded samples
